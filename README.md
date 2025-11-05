@@ -1,93 +1,45 @@
-# MLOPS final project
+# Wine Quality Regression Models Experiment
+Этот проект демонстрирует обучение двух моделей регрессии (LinearRegression и RandomForestRegressor) на датасете Wine Quality с использованием GridSearchCV для настройки гиперпараметров. Эксперименты логируются в MLflow для отслеживания, а результаты сравниваются по метрикам MSE и R². Лучшая модель (RandomForestRegressor) интегрирована в Airflow DAG для автоматизации.
+---
 
+## Описание моделей и гиперпараметров
 
+![Визуализация эксперементов в mlflow](https://ltdfoto.ru/images/2025/11/05/TREKING-EKSPERIMENTOV.png)
 
-## Getting started
+#### LinearRegression
+- Описание: Линейная регрессия - простая модель, которая предполагает линейную зависимость между признаками и целевой переменной (качеством вина). Используется StandardScaler для нормализации данных.
+![Параметры LinearRegression в mlflow](https://ltdfoto.ru/images/2025/11/05/imagefdaa3560d68332ef.png)
+- Гиперпараметры (GridSearchCV):
+fit_intercept: [True, False] - Включать ли смещение (intercept) в модель.
+- Лучшие параметры (из эксперимента): `{'lr__fit_intercept': True}.`
+- Метрики на тесте: MSE = 0.3900, R² = 0.4032.
+![Метрики LinearRegression в mlflow](https://ltdfoto.ru/images/2025/11/05/image94fc2ee926053faf.png)
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+#### RandomForestRegressor
+- Описание: Модель случайного леса способна захватывать нелинейные зависимости. Используется StandardScaler для нормализации.
+![Параметры RandomForest в mlflow](https://ltdfoto.ru/images/2025/11/05/image5d09db5e7ba6a590.png)
+- Гиперпараметры (GridSearchCV):
+    - `n_estimators`: [50, 100, 200] - Количество деревьев в лесу.
+    -  `max_depth`: [None, 10, 20] - Максимальная глубина деревьев (None без ограничений).
+    - `min_samples_split`: [2, 5, 10] - Минимальное количество образцов для разделения узла.
+- Лучшие параметры (из эксперимента): `{'rf__max_depth': None, 'rf__min_samples_split': 2, 'rf__n_estimators': 200}`.
+- Метрики на тесте: MSE = 0.3063, R² = 0.5312.
+![Метрики RandomForest в mlflow](https://ltdfoto.ru/images/2025/11/05/imagec2e491ae557d4d92.png)
+## Сравнение результатов
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+Результаты эксперимента (на основе 5-fold кросс-валидации и тестового набора, random_state=42 для воспроизводимости):
 
-## Add your files
+|Model|Best Params|Best CV MSE|Test MSE|Test R²|
+|-----|-----------|-----------|--------|-------|
+LinearRegression|{'lr__fit_intercept': True}|0.4401|0.3900|0.4032|
+RandomForestRegressor|{'rf__max_depth': None, 'rf__min_samples_split': 2, 'rf__n_estimators': 200}|0.3677|0.3063|0.5312|
 
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
+- MSE (Mean Squared Error): Мера ошибки предсказаний; ниже - лучше.
+- R² (Coefficient of Determination): Доля дисперсии, объясненная моделью; выше - лучше.
+- Обоснование выбора лучшей модели: RandomForestRegressor показывает лучшие результаты (ниже MSE и выше R²), так как он лучше справляется с нелинейными зависимостями в данных Wine Quality. LinearRegression подходит для простых случаев, но здесь уступает. Лучшая модель логируется в MLflow и интегрирована в DAG.
 
-```
-cd existing_repo
-git remote add origin https://git.lab.karpov.courses/dmitrij-novikov-glf7779/mlops-final-project.git
-git branch -M master
-git push -uf origin master
-```
+#### Воспроизводимость: 
 
-## Integrate with your tools
-
-- [ ] [Set up project integrations](https://git.lab.karpov.courses/dmitrij-novikov-glf7779/mlops-final-project/-/settings/integrations)
-
-## Collaborate with your team
-
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
-
-## Test and Deploy
-
-Use the built-in continuous integration in GitLab.
-
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
-
-***
-
-# Editing this README
-
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
-
-## Suggestions for a good README
-
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
-
-## Name
-Choose a self-explaining name for your project.
-
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
-
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
-
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
-
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
-
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
-
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
-
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
-
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
-
-## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+Все random_state установлены на 42.
+Автологирование MLflow: Захватывает метрики, параметры и модели автоматически.
+![Логирование random_state в mlflow](https://ltdfoto.ru/images/2025/11/05/image711f983595d47986.png)
