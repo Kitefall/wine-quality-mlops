@@ -2,10 +2,10 @@ import os
 import joblib
 import yaml
 import pandas as pd
-from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
 
-MODEL_PATH = os.getenv("MODEL_PATH")
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+MODEL_PATH = os.path.join(PROJECT_ROOT, "models", "model.pkl")
 
 def train_model(df: pd.DataFrame):
     with open("src/config.yaml", "r") as f:
