@@ -26,35 +26,29 @@ dag = DAG(
 
 def init_dvc(**context):
     import subprocess
-    repo_path = Variable.get("repo_path", default="/opt/airflow")  # Ваш локальный путь, напр. "/opt/airflow/my-repo"
+    repo_path = Variable.get("REPO_PATH", default="/opt/airflow")
     os.chdir(repo_path)
 
     try:
-        # 1. Git init (если не инициализировано)
         if not os.path.exists('.git'):
             result = subprocess.run(['git', 'init'], capture_output=True, text=True, check=True)
             print("Git initialized.")
-            # Опционально: уберите warning о branch
             subprocess.run(['git', 'config', 'init.defaultBranch', 'main'], check=True)
 
-        # 2. DVC init (если .dvc/ не существует)
         if not os.path.exists('.dvc'):
             subprocess.run(['dvc', 'init'], check=True)
             print("DVC initialized.")
 
-        # 3. Настройка remote для MinIO/S3
         remote_name = "dmitrij-novikov-glf7779"
-        bucket = Variable.get("MINIO_BUCKET", default="dmitrij-novikov-glf7779")  # Ваш bucket
+        bucket = Variable.get("MINIO_BUCKET", default="dmitrij-novikov-glf7779")
         s3_url = f"s3://{bucket}"
         access_key = Variable.get("MINIO_ACCESS_KEY")
         secret_key = Variable.get("MINIO_SECRET_KEY")
         endpoint = Variable.get("MINIO_ENDPOINT", default="https://s3.lab.karpov.courses")
 
-        # Добавьте remote с force (-f), чтобы перезаписать, если существует
         subprocess.run(['dvc', 'remote', 'add', '-f', '-d', remote_name, s3_url], check=True)
         print(f"DVC remote '{remote_name}' added/overwritten with URL {s3_url}.")
 
-        # Настройка credentials и endpoint через dvc config
         subprocess.run([
             'dvc', 'config', f'remote.{remote_name}.access_key_id', access_key
         ], check=True)
@@ -67,7 +61,6 @@ def init_dvc(**context):
 
         print(f"DVC remote '{remote_name}' configured successfully with endpoint {endpoint}.")
 
-        # 4. Опционально: dvc pull, если data.dvc существует (для проверки)
         if os.path.exists('data.dvc'):
             subprocess.run(['dvc', 'pull'], check=True)
             print("Data pulled from remote.")
@@ -79,10 +72,10 @@ def init_dvc(**context):
 def load_data(**kwargs):
     import subprocess
     import pandas as pd
-    repo_path = Variable.get("repo_path", default="/opt/airflow")
+    repo_path = Variable.get("REPO_PATH", default="/opt/airflow")
     os.chdir(repo_path)
 
-    dvc_file = 'data/winequality-red.csv.dvc'  # Правильное имя файла
+    dvc_file = 'data/winequality-red.csv.dvc'
     if not os.path.exists(dvc_file):
         logging.warning(f"{dvc_file} not found. Skipping pull.")
         return None
@@ -90,7 +83,6 @@ def load_data(**kwargs):
     try:
         logging.info(f"Pulling data from DVC... (file: {dvc_file})")
         subprocess.run(['dvc', 'pull'], check=True)
-        # Загрузка данных (ваш код для чтения CSV в DataFrame)
         df = pd.read_csv('data/winequality-red.csv')
         logging.info(f"Data loaded: {len(df)} rows.")
         return df
@@ -129,7 +121,6 @@ def train_model(**kwargs):
     with open('metadata.json', 'w') as f:
         json.dump(metadata, f)
     
-    # Очистка DVC lock перед командами (если существует)
     lock_path = '.dvc/lock'
     if os.path.exists(lock_path):
         os.remove(lock_path)
@@ -137,9 +128,10 @@ def train_model(**kwargs):
     
     try:
         subprocess.run(['dvc', 'add', 'models/model.pkl'], check=True)
-        subprocess.run(['dvc', 'add', 'metadata.json'], check=True)  # Добавьте metadata в DVC
+        subprocess.run(['dvc', 'add', 'models/metrics.json'], check=True)
+        subprocess.run(['dvc', 'add', 'metadata.json'], check=True)
         subprocess.run(['dvc', 'push'], check=True)
-        logging.info("Model and metadata pushed to DVC remote.")
+        logging.info("Model, metrics, and metadata pushed to DVC remote.")
     except subprocess.CalledProcessError as e:
         logging.error(f"DVC error: {e}")
         raise
