@@ -25,6 +25,7 @@ dvc_check:
       - models/model.pkl
       - models/metrics.json
       - metadata.json
+    expire_in: 1 hour
   rules:
     - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "master"
       when: on_success
@@ -35,10 +36,7 @@ api_tests:
   script:
     - pip install -r requirements.txt
     - pytest tests
-  dependencies:
-    - dvc_check
   needs:
-    - lint_test
+    - dvc_check
   rules:
     - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "master"
-
