@@ -20,6 +20,11 @@ dvc_check:
     - apt-get update && apt-get install -y git 
     - pip install "dvc[s3]"
     - dvc pull
+  artifacts:
+    paths:
+      - models/model.pkl
+      - models/metrics.json
+      - metadata.json
   rules:
     - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "master"
       when: on_success
@@ -30,7 +35,10 @@ api_tests:
   script:
     - pip install -r requirements.txt
     - pytest tests
+  dependencies:
+    - dvc_check
   needs:
     - lint_test
   rules:
     - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "master"
+
