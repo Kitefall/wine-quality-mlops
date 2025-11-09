@@ -203,6 +203,9 @@ __marimo__/
 
 .env
 .csv
-.ipynb
+main.ipynb
 .db
 /metadata.json
+logs
+config/
+.dvc
