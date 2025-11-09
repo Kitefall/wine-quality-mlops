@@ -1,4 +1,3 @@
-import datetime
 import os
 from airflow import DAG
 from airflow.providers.standard.operators.python import PythonOperator
@@ -122,7 +121,6 @@ def load_data(**kwargs):
     os.chdir(repo_path)
 
     data_path = 'data/winequality-red.csv'
-    dvc_path = data_path + '.dvc'
 
     try:
         logging.info("Pulling data from DVC with --force...")
