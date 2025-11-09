@@ -1,5 +1,6 @@
 import json
 import os
+from pathlib import Path
 
 import joblib
 import pandas as pd
@@ -8,7 +9,7 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.model_selection import train_test_split
 
-PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PROJECT_ROOT = Path.cwd()
 MODEL_PATH = os.path.join(PROJECT_ROOT, "models", "model.pkl")
 METRICS_PATH = os.path.join(PROJECT_ROOT, "models", "metrics.json")
 
