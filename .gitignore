@@ -203,7 +203,6 @@ __marimo__/
 
 .env
 .csv
-main.ipynb
 .db
 /metadata.json
 logs
