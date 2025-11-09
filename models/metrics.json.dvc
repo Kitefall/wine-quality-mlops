@@ -1,6 +1,6 @@
 outs:
-- md5: 1a711743b205ed2c8ba93a5c998f9e13
-  size: 93
+- md5: 20d6f05adb726d8849327f031114a467
+  size: 97
   hash: md5
   path: metrics.json
   isexec: true
