@@ -196,7 +196,7 @@ def train_model(**kwargs):
             logging.info("No changes to commit in Git. Skipping commit.")
             return
         else:
-            subprocess.run(['git', 'commit', '-m', 'Updated model metrics'], check=True)
+            subprocess.run(['git', 'commit', '-m', 'Updated model and metrics'], check=True)
             logging.info("Git commit completed.")
     except subprocess.CalledProcessError as e:
         logging.error(f"Git commit error: {e}")
