@@ -1,8 +1,10 @@
 from contextlib import asynccontextmanager
 import logging
 import os
+from pathlib import Path
 import subprocess
 import joblib
+import pandas as pd
 import uvicorn
 from fastapi import FastAPI, HTTPException, Request
 import numpy as np
@@ -10,18 +12,19 @@ import json
 
 from src.app.schema.features_schema import WineFeatures
 
-PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PROJECT_ROOT = Path.cwd()
 MODEL_PATH = os.path.join(PROJECT_ROOT, "models", "model.pkl")
 METRICS_PATH = os.path.join(PROJECT_ROOT, "models", "metrics.json")
 USE_DVC = os.getenv("USE_DVC")
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
+
+def load_model_and_metrics(app: FastAPI):   
     model = None
     metrics = None
+    
     if USE_DVC and int(USE_DVC) == 1:
         try:
-            subprocess.run(["dvc", "pull", '--force', "models/model.pkl.dvc"], check=True)
+            subprocess.run(["dvc", "pull", '--force', "models/model.pkl.dvc"], check=True, cwd=PROJECT_ROOT)
             logging.info("DVC pull successful for model")
         except subprocess.CalledProcessError as e:
             logging.warning("DVC pull failed for model: %s", e)
@@ -29,28 +32,35 @@ async def lifespan(app: FastAPI):
             logging.warning("DVC not installed or model .dvc file not found")
         
         try:
-            subprocess.run(["dvc", "pull", "models/metrics.json.dvc"], check=True)
+            subprocess.run(["dvc", "pull", "models/metrics.json.dvc"], check=True, cwd=PROJECT_ROOT)
             logging.info("DVC pull successful for metrics")
         except subprocess.CalledProcessError as e:
             logging.warning("DVC pull failed for metrics: %s", e)
         except FileNotFoundError:
             logging.warning("DVC not installed or metrics .dvc file not found")
-        
+    
     try:
-        model = joblib.load('/app/models/model.pkl')
+        model = joblib.load(MODEL_PATH)  # Используем MODEL_PATH
         logging.info("Model loaded successfully")
     except Exception as e:
         logging.exception("Failed to load model: %s", e)
         model = None
     
     try:
-        with open('/app/models/metrics.json', 'r') as f:
+        with open(METRICS_PATH, 'r') as f:  # Используем METRICS_PATH
             metrics = json.load(f)
         logging.info("Metrics loaded successfully")
     except Exception as e:
         logging.exception("Failed to load metrics: %s", e)
         metrics = None
     
+    return model, metrics
+
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    model, metrics = load_model_and_metrics(app)
     app.state.model = model
     app.state.metrics = metrics
     yield
@@ -62,20 +72,33 @@ def predict(request: Request, data: WineFeatures) -> dict:
     model = request.app.state.model
     if model is None:
         raise HTTPException(status_code=503, detail="Model not available")
+
+    feature_mapping = {
+        "fixed_acidity": "fixed acidity",
+        "volatile_acidity": "volatile acidity",
+        "citric_acid": "citric acid",
+        "residual_sugar": "residual sugar",
+        "chlorides": "chlorides",
+        "free_sulfur_dioxide": "free sulfur dioxide",
+        "total_sulfur_dioxide": "total sulfur dioxide",
+        "density": "density",
+        "pH": "pH",
+        "sulphates": "sulphates",
+        "alcohol": "alcohol"
+    }
     
-    features = np.array([[
-        data.fixed_acidity,
-        data.volatile_acidity,
-        data.citric_acid,
-        data.residual_sugar,
-        data.chlorides,
-        data.free_sulfur_dioxide,
-        data.total_sulfur_dioxide,
-        data.density,
-        data.pH,
-        data.sulphates,
-        data.alcohol
-    ]])
+    expected_features = [
+        "fixed acidity", "volatile acidity", "citric acid", "residual sugar",
+        "chlorides", "free sulfur dioxide", "total sulfur dioxide",
+        "density", "pH", "sulphates", "alcohol"
+    ]
+    
+    data_dict = data.model_dump()
+    mapped_data = {feature_mapping[key]: value for key, value in data_dict.items()}
+    features = pd.DataFrame([mapped_data], columns=expected_features)
+    
+    if not all(key in mapped_data for key in expected_features):
+        raise HTTPException(status_code=400, detail="Missing or invalid features after mapping")
     
     try:
         prediction = model.predict(features)[0]
