@@ -1,45 +1,170 @@
-# Wine Quality Regression Models Experiment
-Этот проект демонстрирует обучение двух моделей регрессии (LinearRegression и RandomForestRegressor) на датасете Wine Quality с использованием GridSearchCV для настройки гиперпараметров. Эксперименты логируются в MLflow для отслеживания, а результаты сравниваются по метрикам MSE и R². Лучшая модель (RandomForestRegressor) интегрирована в Airflow DAG для автоматизации.
----
+# Эксперимент с моделями регрессии качества вина
 
-## Описание моделей и гиперпараметров
+Этот проект демонстрирует использование MLflow для отслеживания экспериментов с обучением двух моделей регрессии (LinearRegression и RandomForestRegressor) на датасете Wine Quality, с настройкой гиперпараметров через GridSearchCV. Результаты сравниваются по метрикам MSE и R², а лучшая модель (RandomForestRegressor) интегрирована в Airflow DAG для автоматизации.
 
-![Визуализация эксперементов в mlflow](https://ltdfoto.ru/images/2025/11/05/TREKING-EKSPERIMENTOV.png)
+## Оглавление
+- [Описание проекта](#описание-проекта)
+- [Структура проекта](#структура-проекта)
+- [Процесс и результаты экспериментов](#процесс-и-результаты-экспериментов)
+- [Инструкции по запуску](#инструкции-по-запуску)
+- [Предпосылки](#предпосылки)
+- [Вклад в проект](#вклад-в-проект)
+
+## Описание проекта
+Этот MLOps-проект фокусируется на создании и развертывании моделей регрессии для предсказания качества вина. Он включает лучшие практики, такие как версионирование данных с DVC, оркестрация рабочих процессов с Airflow и развертывание API для вывода модели. Используется датасет Wine Quality, проект подчеркивает воспроизводимость, автоматизацию и интеграцию CI/CD через GitLab.
+
+## Структура проекта
+
+```
+mlops-final-project/
+├── .dvc/                          # Конфигурация DVC для версионирования данных и моделей
+├── dags/                          # Airflow DAG'ы для оркестрации пайплайна
+├── data/                          # Данные (датасеты, сырые и обработанные), отслеживаемые DVC
+├── docker/                        # Docker-конфигурации
+│   ├── airflow/                   # Dockerfile для Airflow
+│   └── api/                       # Dockerfile для API
+├── models/                        # Сериализованные модели и метрики, отслеживаемые DVC
+├── notebooks/                     # Jupyter-ноутбуки для экспериментов
+├── plugins/                       # Плагины Airflow
+├── src/                           # Скрипт и config с лучшими параметрами для обучения модели
+│   └── app/                       # Приложение API (включая api.py для FastAPI)
+│       └── schema/                # Схемы данных для API
+├── tests/                         # Тесты
+├── .env.example                   # Пример переменных окружения
+├── docker-compose.yml             # Docker Compose для запуска сервисов
+├── requirements.txt               # Зависимости Python
+├── .gitlab-ci.yml                 # CI/CD для GitLab
+└── README.md                      # Этот файл
+```
+
+**Подробное описание ключевых папок:**
+- **dags/**: Содержит DAG'и для автоматизированного обучения и развертывания модели.
+- **data/**: Хранение датасетов (сырых и обработанных) и файлов, отслеживаемых DVC.
+- **docker/**: Содержит специфические Dockerfile'ы для Airflow и API.
+- **models/**: Сериализованные модели и метрики, отслеживаемые DVC.
+- **notebooks/**: Jupyter ноутбуки для экспериментов.
+- **src/app/**: REST API, построенный с FastAPI, для обслуживания предсказаний (включая api.py).
+- **tests/**: Включает тесты API
+- **.dvc/**: Настройка версионирования данных с хранением S3/Minio.
+
+## Процесс и результаты экспериментов
+
+Эксперименты включают обучение моделей LinearRegression и RandomForestRegressor на датасете Wine Quality. Гиперпараметры настраиваются с использованием GridSearchCV с 5-кратной кросс-валидацией. Результаты фиксируются для воспроизводимости, включая метрики, параметры и визуализации.
+
+### Модели и гиперпараметры
 
 #### LinearRegression
-- Описание: Линейная регрессия - простая модель, которая предполагает линейную зависимость между признаками и целевой переменной (качеством вина). Используется StandardScaler для нормализации данных.
-![Параметры LinearRegression в mlflow](https://ltdfoto.ru/images/2025/11/05/imagefdaa3560d68332ef.png)
-- Гиперпараметры (GridSearchCV):
-fit_intercept: [True, False] - Включать ли смещение (intercept) в модель.
-- Лучшие параметры (из эксперимента): `{'lr__fit_intercept': True}.`
-- Метрики на тесте: MSE = 0.3900, R² = 0.4032.
-![Метрики LinearRegression в mlflow](https://ltdfoto.ru/images/2025/11/05/image94fc2ee926053faf.png)
+- **Описание**: Линейная регрессия предполагает линейную зависимость между признаками и целевой переменной (качеством вина). Используется StandardScaler для нормализации данных.
+- **Гиперпараметры (GridSearchCV)**:
+  - `fit_intercept`: [True, False] – Включать ли смещение (intercept) в модель.
+- **Лучшие параметры (из эксперимента)**: `{'lr__fit_intercept': True}`.
+- **Метрики на тесте**: MSE = 0.3900, R² = 0.4032.
 
 #### RandomForestRegressor
-- Описание: Модель случайного леса способна захватывать нелинейные зависимости. Используется StandardScaler для нормализации.
-![Параметры RandomForest в mlflow](https://ltdfoto.ru/images/2025/11/05/image5d09db5e7ba6a590.png)
-- Гиперпараметры (GridSearchCV):
-    - `n_estimators`: [50, 100, 200] - Количество деревьев в лесу.
-    -  `max_depth`: [None, 10, 20] - Максимальная глубина деревьев (None без ограничений).
-    - `min_samples_split`: [2, 5, 10] - Минимальное количество образцов для разделения узла.
-- Лучшие параметры (из эксперимента): `{'rf__max_depth': None, 'rf__min_samples_split': 2, 'rf__n_estimators': 200}`.
-- Метрики на тесте: MSE = 0.3063, R² = 0.5312.
-![Метрики RandomForest в mlflow](https://ltdfoto.ru/images/2025/11/05/imagec2e491ae557d4d92.png)
-## Сравнение результатов
+- **Описание**: Модель случайного леса способна захватывать нелинейные зависимости. Используется StandardScaler для нормализации.
+- **Гиперпараметры (GridSearchCV)**:
+  - `n_estimators`: [50, 100, 200] – Количество деревьев в лесу.
+  - `max_depth`: [None, 10, 20] – Максимальная глубина деревьев (None без ограничений).
+  - `min_samples_split`: [2, 5, 10] – Минимальное количество образцов для разделения узла.
+- **Лучшие параметры (из эксперимента)**: `{'rf__max_depth': None, 'rf__min_samples_split': 2, 'rf__n_estimators': 200}`.
+- **Метрики на тесте**: MSE = 0.3063, R² = 0.5312.
 
-Результаты эксперимента (на основе 5-fold кросс-валидации и тестового набора, random_state=42 для воспроизводимости):
+### Сравнение результатов
 
-|Model|Best Params|Best CV MSE|Test MSE|Test R²|
-|-----|-----------|-----------|--------|-------|
-LinearRegression|{'lr__fit_intercept': True}|0.4401|0.3900|0.4032|
-RandomForestRegressor|{'rf__max_depth': None, 'rf__min_samples_split': 2, 'rf__n_estimators': 200}|0.3677|0.3063|0.5312|
+Результаты основаны на 5-кратной кросс-валидации и тестовом наборе, с `random_state=42` для воспроизводимости:
 
-- MSE (Mean Squared Error): Мера ошибки предсказаний; ниже - лучше.
-- R² (Coefficient of Determination): Доля дисперсии, объясненная моделью; выше - лучше.
-- Обоснование выбора лучшей модели: RandomForestRegressor показывает лучшие результаты (ниже MSE и выше R²), так как он лучше справляется с нелинейными зависимостями в данных Wine Quality. LinearRegression подходит для простых случаев, но здесь уступает. Лучшая модель логируется в MLflow и интегрирована в DAG.
+| Модель               | Лучшие параметры                                                                 | Лучший CV MSE | Тестовый MSE | Тестовый R² |
+|----------------------|----------------------------------------------------------------------------------|---------------|--------------|-------------|
+| LinearRegression     | `{'lr__fit_intercept': True}`                                                    | 0.4401        | 0.3900       | 0.4032      |
+| RandomForestRegressor| `{'rf__max_depth': None, 'rf__min_samples_split': 2, 'rf__n_estimators': 200}` | 0.3677        | 0.3063       | 0.5312      |
 
-#### Воспроизводимость: 
+- **MSE (Mean Squared Error)**: Мера ошибки предсказаний; ниже – лучше.
+- **R² (Coefficient of Determination)**: Доля дисперсии, объясненная моделью; выше – лучше.
+- **Обоснование выбора лучшей модели**: RandomForestRegressor показывает лучшие результаты (ниже MSE и выше R²), так как он лучше справляется с нелинейными зависимостями в данных Wine Quality. LinearRegression подходит для простых случаев, но здесь уступает. Лучшая модель интегрирована в DAG.
 
-Все random_state установлены на 42.
-Автологирование MLflow: Захватывает метрики, параметры и модели автоматически.
-![Логирование random_state в mlflow](https://ltdfoto.ru/images/2025/11/05/image711f983595d47986.png)
+### Воспроизводимость
+- Все `random_state` установлены на 42.
+
+## Инструкции по запуску
+
+Следуйте этим шагам для настройки и запуска проекта локально.
+
+### Предпосылки
+- Установлены Docker и Docker Compose.
+- Git для клонирования репозитория.
+- Доступ к совместимому с S3 хранилищу (например, Minio) для DVC.
+- Аккаунт GitLab с персональным токеном доступа для коммитов.
+
+### Пошаговая настройка
+1. **Форк репозитория**:
+   - Посетите [https://git.lab.karpov.courses/dmitrij-novikov-glf7779/mlops-final-project](https://git.lab.karpov.courses/dmitrij-novikov-glf7779/mlops-final-project) и сделайте форк в свой аккаунт GitLab.
+
+2. **Клонируйте форкнутый репозиторий**:
+   ```
+   git clone https://git.lab.karpov.courses/<your-username>/mlops-final-project.git
+   cd mlops-final-project
+   ```
+
+3. **Настройка переменных окружения**:
+   - Скопируйте `.env.example` в `.env`:
+     ```
+     cp .env.example .env
+     ```
+   - Отредактируйте `.env` с вашими значениями:
+     ```
+     # Airflow
+     AIRFLOW_UID=1001
+     # Project env
+     USE_DVC=1
+     AWS_ACCESS_KEY_ID=<your_minio_ACCESS_KEY>
+     AWS_SECRET_ACCESS_KEY=<your_minio_SECRET_ACCESS_KEY>
+     REPO_PATH=/opt/airflow/project
+     ```
+     Замените `AWS_ACCESS_KEY_ID` и `AWS_SECRET_ACCESS_KEY` на ваши учетные данные S3/Minio.
+
+4. **Настройка DVC**:
+   - Скопируйте `.dvc/config.local.example` в `.dvc/config.local`:
+     ```
+     cp .dvc/config.local.example .dvc/config.local
+     ```
+   - Обновите `.dvc/config.local` с вашими учетными данными S3 (такими же, как в `.env`).
+
+5. **Сборка и запуск с Docker**:
+   - Перейдите в корень проекта.
+   - Выполните:
+     ```
+     docker compose up --build
+     ```
+   - Интерфейс Airflow будет доступен по адресу [http://localhost:8080](http://localhost:8080).
+   - API будет доступно по адресу [http://localhost:8000](http://localhost:8000).
+
+6. **Настройка переменных Airflow**:
+   - Перейдите в веб-интерфейс Airflow.
+   - Перейдите в **Admin > Variables** и создайте следующие переменные:
+     - `GIT_BRANCH`: `develop` (ветка для коммита .dvc файлов и метрик).
+     - `GIT_REMOTE_URL`: `https://<username>:<token>@<repo-url>` (например, `https://dmitrij-novikov-glf7779:mytoken@git.lab.karpov.courses/dmitrij-novikov-glf7779/mlops-final-project.git`).
+     - `GIT_USER_EMAIL`: Ваш email.
+     - `GIT_USER_NAME`: Ваше имя.
+     - `MINIO_ACCESS_KEY`: Такой же, как в `.dvc/config.local`.
+     - `MINIO_SECRET_KEY`: Такой же, как в `.dvc/config.local`.
+     - `REPO_PATH`: `/opt/airflow/project` (такой же, как в `.env`).
+
+7. **Запуск DAG**:
+   - В интерфейсе Airflow перейдите в **DAGs** и запустите DAG.
+   - ![Запуск DAG](https://ltdfoto.ru/images/2025/11/09/image3bab087f986e31c3.png)
+   - Отслеживайте прогресс в представлении DAG.
+   - ![Детали DAG](https://ltdfoto.ru/images/2025/11/09/imageed3666d1984cafeb.png)
+   - Проверьте логи на успешное завершение.
+   - ![Логи успешной задачи](https://ltdfoto.ru/images/2025/11/09/image21fc62461c6939d2.png)
+   - Проверьте коммиты в GitLab.
+   - ![История коммитов GitLab](https://ltdfoto.ru/images/2025/11/09/imagea83763c40c814b8a.png)
+
+8. **Тестирование API**:
+   - Доступ к Swagger UI по адресу [http://localhost:8000/docs](http://localhost:8000/docs) для тестирования предсказаний.
+
+### Проверки CI/CD
+При создании merge request в ветку `main` выполняются следующие проверки:
+1. **Линтинг Flake8**: Проверки стиля кода.
+2. **Проверка DVC**: Проверяет доступность файлов в хранилище S3.
+3. **Тесты API**: Выполняются после проверки DVC, используя загруженные артефакты модели.
+   - ![Проверки CI/CD](https://ltdfoto.ru/images/2025/11/09/image149def195f347da8.png)
