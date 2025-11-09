@@ -91,7 +91,6 @@ def load_data(**kwargs):
         raise
 
 
-
 def train_model(**kwargs):
     import subprocess
     import json
