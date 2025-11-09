@@ -184,6 +184,7 @@ def train_model(**kwargs):
 
     from airflow.sdk import Variable
 
+    branch = Variable.get("GIT_BRANCH", "develop")
     repo_path = Variable.get("REPO_PATH", "/opt/airflow")
     os.makedirs(repo_path, exist_ok=True)
     os.chdir(repo_path)
@@ -243,7 +244,7 @@ def train_model(**kwargs):
 
     try:
         result = subprocess.run(
-            ["git", "push", "origin", "develop"],
+            ["git", "push", "origin", branch],
             check=True,
             capture_output=True,
             text=True,
