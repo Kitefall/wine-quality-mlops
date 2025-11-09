@@ -17,6 +17,7 @@ dvc_check:
   stage: dvc_check
   image: python:3.12-slim
   script:
+    - apt-get update && apt-get install -y git 
     - pip install "dvc[s3]"
     - dvc pull
   rules:
