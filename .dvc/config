@@ -1,0 +1,5 @@
+[core]
+    remote = dmitrij-novikov-glf7779
+['remote "dmitrij-novikov-glf7779"']
+    url = s3://dmitrij-novikov-glf7779
+    endpointurl = https://s3.lab.karpov.courses
