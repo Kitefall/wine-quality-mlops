@@ -1,93 +1,170 @@
-# MLOPS final project
+# Эксперимент с моделями регрессии качества вина
 
+Этот проект демонстрирует использование MLflow для отслеживания экспериментов с обучением двух моделей регрессии (LinearRegression и RandomForestRegressor) на датасете Wine Quality, с настройкой гиперпараметров через GridSearchCV. Результаты сравниваются по метрикам MSE и R², а лучшая модель (RandomForestRegressor) интегрирована в Airflow DAG для автоматизации.
 
+## Оглавление
+- [Описание проекта](#описание-проекта)
+- [Структура проекта](#структура-проекта)
+- [Процесс и результаты экспериментов](#процесс-и-результаты-экспериментов)
+- [Инструкции по запуску](#инструкции-по-запуску)
+- [Предпосылки](#предпосылки)
+- [Вклад в проект](#вклад-в-проект)
 
-## Getting started
+## Описание проекта
+Этот MLOps-проект фокусируется на создании и развертывании моделей регрессии для предсказания качества вина. Он включает лучшие практики, такие как версионирование данных с DVC, оркестрация рабочих процессов с Airflow и развертывание API для вывода модели. Используется датасет Wine Quality, проект подчеркивает воспроизводимость, автоматизацию и интеграцию CI/CD через GitLab.
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
-
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
-
-## Add your files
-
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
+## Структура проекта
 
 ```
-cd existing_repo
-git remote add origin https://git.lab.karpov.courses/dmitrij-novikov-glf7779/mlops-final-project.git
-git branch -M master
-git push -uf origin master
+mlops-final-project/
+├── .dvc/                          # Конфигурация DVC для версионирования данных и моделей
+├── dags/                          # Airflow DAG'ы для оркестрации пайплайна
+├── data/                          # Данные (датасеты, сырые и обработанные), отслеживаемые DVC
+├── docker/                        # Docker-конфигурации
+│   ├── airflow/                   # Dockerfile для Airflow
+│   └── api/                       # Dockerfile для API
+├── models/                        # Сериализованные модели и метрики, отслеживаемые DVC
+├── notebooks/                     # Jupyter-ноутбуки для экспериментов
+├── plugins/                       # Плагины Airflow
+├── src/                           # Скрипт и config с лучшими параметрами для обучения модели
+│   └── app/                       # Приложение API (включая api.py для FastAPI)
+│       └── schema/                # Схемы данных для API
+├── tests/                         # Тесты
+├── .env.example                   # Пример переменных окружения
+├── docker-compose.yml             # Docker Compose для запуска сервисов
+├── requirements.txt               # Зависимости Python
+├── .gitlab-ci.yml                 # CI/CD для GitLab
+└── README.md                      # Этот файл
 ```
 
-## Integrate with your tools
+**Подробное описание ключевых папок:**
+- **dags/**: Содержит DAG'и для автоматизированного обучения и развертывания модели.
+- **data/**: Хранение датасетов (сырых и обработанных) и файлов, отслеживаемых DVC.
+- **docker/**: Содержит специфические Dockerfile'ы для Airflow и API.
+- **models/**: Сериализованные модели и метрики, отслеживаемые DVC.
+- **notebooks/**: Jupyter ноутбуки для экспериментов.
+- **src/app/**: REST API, построенный с FastAPI, для обслуживания предсказаний (включая api.py).
+- **tests/**: Включает тесты API
+- **.dvc/**: Настройка версионирования данных с хранением S3/Minio.
 
-- [ ] [Set up project integrations](https://git.lab.karpov.courses/dmitrij-novikov-glf7779/mlops-final-project/-/settings/integrations)
+## Процесс и результаты экспериментов
 
-## Collaborate with your team
+Эксперименты включают обучение моделей LinearRegression и RandomForestRegressor на датасете Wine Quality. Гиперпараметры настраиваются с использованием GridSearchCV с 5-кратной кросс-валидацией. Результаты фиксируются для воспроизводимости, включая метрики, параметры и визуализации.
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
+### Модели и гиперпараметры
 
-## Test and Deploy
+#### LinearRegression
+- **Описание**: Линейная регрессия предполагает линейную зависимость между признаками и целевой переменной (качеством вина). Используется StandardScaler для нормализации данных.
+- **Гиперпараметры (GridSearchCV)**:
+  - `fit_intercept`: [True, False] – Включать ли смещение (intercept) в модель.
+- **Лучшие параметры (из эксперимента)**: `{'lr__fit_intercept': True}`.
+- **Метрики на тесте**: MSE = 0.3900, R² = 0.4032.
 
-Use the built-in continuous integration in GitLab.
+#### RandomForestRegressor
+- **Описание**: Модель случайного леса способна захватывать нелинейные зависимости. Используется StandardScaler для нормализации.
+- **Гиперпараметры (GridSearchCV)**:
+  - `n_estimators`: [50, 100, 200] – Количество деревьев в лесу.
+  - `max_depth`: [None, 10, 20] – Максимальная глубина деревьев (None без ограничений).
+  - `min_samples_split`: [2, 5, 10] – Минимальное количество образцов для разделения узла.
+- **Лучшие параметры (из эксперимента)**: `{'rf__max_depth': None, 'rf__min_samples_split': 2, 'rf__n_estimators': 200}`.
+- **Метрики на тесте**: MSE = 0.3063, R² = 0.5312.
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+### Сравнение результатов
 
-***
+Результаты основаны на 5-кратной кросс-валидации и тестовом наборе, с `random_state=42` для воспроизводимости:
 
-# Editing this README
+| Модель               | Лучшие параметры                                                                 | Лучший CV MSE | Тестовый MSE | Тестовый R² |
+|----------------------|----------------------------------------------------------------------------------|---------------|--------------|-------------|
+| LinearRegression     | `{'lr__fit_intercept': True}`                                                    | 0.4401        | 0.3900       | 0.4032      |
+| RandomForestRegressor| `{'rf__max_depth': None, 'rf__min_samples_split': 2, 'rf__n_estimators': 200}` | 0.3677        | 0.3063       | 0.5312      |
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+- **MSE (Mean Squared Error)**: Мера ошибки предсказаний; ниже – лучше.
+- **R² (Coefficient of Determination)**: Доля дисперсии, объясненная моделью; выше – лучше.
+- **Обоснование выбора лучшей модели**: RandomForestRegressor показывает лучшие результаты (ниже MSE и выше R²), так как он лучше справляется с нелинейными зависимостями в данных Wine Quality. LinearRegression подходит для простых случаев, но здесь уступает. Лучшая модель интегрирована в DAG.
 
-## Suggestions for a good README
+### Воспроизводимость
+- Все `random_state` установлены на 42.
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+## Инструкции по запуску
 
-## Name
-Choose a self-explaining name for your project.
+Следуйте этим шагам для настройки и запуска проекта локально.
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+### Предпосылки
+- Установлены Docker и Docker Compose.
+- Git для клонирования репозитория.
+- Доступ к совместимому с S3 хранилищу (например, Minio) для DVC.
+- Аккаунт GitLab с персональным токеном доступа для коммитов.
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+### Пошаговая настройка
+1. **Форк репозитория**:
+   - Посетите [https://git.lab.karpov.courses/dmitrij-novikov-glf7779/mlops-final-project](https://git.lab.karpov.courses/dmitrij-novikov-glf7779/mlops-final-project) и сделайте форк в свой аккаунт GitLab.
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+2. **Клонируйте форкнутый репозиторий**:
+   ```
+   git clone https://git.lab.karpov.courses/<your-username>/mlops-final-project.git
+   cd mlops-final-project
+   ```
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+3. **Настройка переменных окружения**:
+   - Скопируйте `.env.example` в `.env`:
+     ```
+     cp .env.example .env
+     ```
+   - Отредактируйте `.env` с вашими значениями:
+     ```
+     # Airflow
+     AIRFLOW_UID=1001
+     # Project env
+     USE_DVC=1
+     AWS_ACCESS_KEY_ID=<your_minio_ACCESS_KEY>
+     AWS_SECRET_ACCESS_KEY=<your_minio_SECRET_ACCESS_KEY>
+     REPO_PATH=/opt/airflow/project
+     ```
+     Замените `AWS_ACCESS_KEY_ID` и `AWS_SECRET_ACCESS_KEY` на ваши учетные данные S3/Minio.
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+4. **Настройка DVC**:
+   - Скопируйте `.dvc/config.local.example` в `.dvc/config.local`:
+     ```
+     cp .dvc/config.local.example .dvc/config.local
+     ```
+   - Обновите `.dvc/config.local` с вашими учетными данными S3 (такими же, как в `.env`).
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+5. **Сборка и запуск с Docker**:
+   - Перейдите в корень проекта.
+   - Выполните:
+     ```
+     docker compose up --build
+     ```
+   - Интерфейс Airflow будет доступен по адресу [http://localhost:8080](http://localhost:8080).
+   - API будет доступно по адресу [http://localhost:8000](http://localhost:8000).
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+6. **Настройка переменных Airflow**:
+   - Перейдите в веб-интерфейс Airflow.
+   - Перейдите в **Admin > Variables** и создайте следующие переменные:
+     - `GIT_BRANCH`: `develop` (ветка для коммита .dvc файлов и метрик).
+     - `GIT_REMOTE_URL`: `https://<username>:<token>@<repo-url>` (например, `https://dmitrij-novikov-glf7779:mytoken@git.lab.karpov.courses/dmitrij-novikov-glf7779/mlops-final-project.git`).
+     - `GIT_USER_EMAIL`: Ваш email.
+     - `GIT_USER_NAME`: Ваше имя.
+     - `MINIO_ACCESS_KEY`: Такой же, как в `.dvc/config.local`.
+     - `MINIO_SECRET_KEY`: Такой же, как в `.dvc/config.local`.
+     - `REPO_PATH`: `/opt/airflow/project` (такой же, как в `.env`).
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+7. **Запуск DAG**:
+   - В интерфейсе Airflow перейдите в **DAGs** и запустите DAG.
+   - ![Запуск DAG](https://ltdfoto.ru/images/2025/11/09/image3bab087f986e31c3.png)
+   - Отслеживайте прогресс в представлении DAG.
+   - ![Детали DAG](https://ltdfoto.ru/images/2025/11/09/imageed3666d1984cafeb.png)
+   - Проверьте логи на успешное завершение.
+   - ![Логи успешной задачи](https://ltdfoto.ru/images/2025/11/09/image21fc62461c6939d2.png)
+   - Проверьте коммиты в GitLab.
+   - ![История коммитов GitLab](https://ltdfoto.ru/images/2025/11/09/imagea83763c40c814b8a.png)
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+8. **Тестирование API**:
+   - Доступ к Swagger UI по адресу [http://localhost:8000/docs](http://localhost:8000/docs) для тестирования предсказаний.
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
-
-## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+### Проверки CI/CD
+При создании merge request в ветку `main` выполняются следующие проверки:
+1. **Линтинг Flake8**: Проверки стиля кода.
+2. **Проверка DVC**: Проверяет доступность файлов в хранилище S3.
+3. **Тесты API**: Выполняются после проверки DVC, используя загруженные артефакты модели.
+   - ![Проверки CI/CD](https://ltdfoto.ru/images/2025/11/09/image149def195f347da8.png)
