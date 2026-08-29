@@ -2,6 +2,8 @@
 
 Этот проект демонстрирует использование MLflow для отслеживания экспериментов с обучением двух моделей регрессии (LinearRegression и RandomForestRegressor) на датасете Wine Quality, с настройкой гиперпараметров через GridSearchCV. Результаты сравниваются по метрикам MSE и R², а лучшая модель (RandomForestRegressor) интегрирована в Airflow DAG для автоматизации.
 
+> **Примечание:** Проект изначально разрабатывался с использованием GitLab (CI/CD, репозиторий). Сейчас он перенесён на GitHub для публичного портфолио. Вся функциональность CI/CD описана для GitLab.
+
 ## Оглавление
 - [Описание проекта](#описание-проекта)
 - [Структура проекта](#структура-проекта)
@@ -44,7 +46,7 @@ mlops-final-project/
 - **models/**: Сериализованные модели и метрики, отслеживаемые DVC.
 - **notebooks/**: Jupyter ноутбуки для экспериментов.
 - **src/app/**: REST API, построенный с FastAPI, для обслуживания предсказаний (включая api.py).
-- **tests/**: Включает тесты API
+- **tests/**: Включает тесты API.
 - **.dvc/**: Настройка версионирования данных с хранением S3/Minio.
 
 ## Процесс и результаты экспериментов
@@ -93,24 +95,25 @@ mlops-final-project/
 - Установлены Docker и Docker Compose.
 - Git для клонирования репозитория.
 - Доступ к совместимому с S3 хранилищу (например, Minio) для DVC.
-- Аккаунт GitLab с персональным токеном доступа для коммитов.
+- Аккаунт GitLab с персональным токеном доступа (если используется оригинальный CI/CD).
 
 ### Пошаговая настройка
-1. **Форк репозитория**:
-   - Посетите [https://git.lab.karpov.courses/dmitrij-novikov-glf7779/mlops-final-project](https://git.lab.karpov.courses/dmitrij-novikov-glf7779/mlops-final-project) и сделайте форк в свой аккаунт GitLab.
+1. **Клонирование репозитория**:
+   - Поскольку проект теперь на GitHub, клонируйте с GitHub:
+git clone https://github.com/Kitefall/wine-quality-mlops.git
+cd wine-quality-mlops
 
-2. **Клонируйте форкнутый репозиторий**:
-   ```
-   git clone https://git.lab.karpov.courses/<your-username>/mlops-final-project.git
-   cd mlops-final-project
-   ```
+- Если вы работаете с оригинальным репозиторием GitLab, используйте соответствующую ссылку:
+git clone https://git.lab.karpov.courses/<your-username>/mlops-final-project.git
+cd mlops-final-project
 
-3. **Настройка переменных окружения**:
-   - Скопируйте `.env.example` в `.env`:
+2. **Настройка переменных окружения**:
+
+- Скопируйте `.env.example` в `.env`:
      ```
      cp .env.example .env
      ```
-   - Отредактируйте `.env` с вашими значениями:
+- Отредактируйте `.env` с вашими значениями:
      ```
      # Airflow
      AIRFLOW_UID=1001
@@ -122,49 +125,42 @@ mlops-final-project/
      ```
      Замените `AWS_ACCESS_KEY_ID` и `AWS_SECRET_ACCESS_KEY` на ваши учетные данные S3/Minio.
 
-4. **Настройка DVC**:
-   - Скопируйте `.dvc/config.local.example` в `.dvc/config.local`:
-     ```
-     cp .dvc/config.local.example .dvc/config.local
-     ```
-   - Обновите `.dvc/config.local` с вашими учетными данными S3 (такими же, как в `.env`).
+3. **Настройка DVC**:
+- Скопируйте `.dvc/config.local.example` в `.dvc/config.local`:
+cp .dvc/config.local.example .dvc/config.local
 
-5. **Сборка и запуск с Docker**:
-   - Перейдите в корень проекта.
-   - Выполните:
-     ```
-     docker compose up --build
-     ```
-   - Интерфейс Airflow будет доступен по адресу [http://localhost:8080](http://localhost:8080).
-   - API будет доступно по адресу [http://localhost:8000](http://localhost:8000).
+- Обновите `.dvc/config.local` с вашими учетными данными S3 (такими же, как в `.env`).
 
-6. **Настройка переменных Airflow**:
-   - Перейдите в веб-интерфейс Airflow.
-   - Перейдите в **Admin > Variables** и создайте следующие переменные:
-     - `GIT_BRANCH`: `develop` (ветка для коммита .dvc файлов и метрик).
-     - `GIT_REMOTE_URL`: `https://<username>:<token>@<repo-url>` (например, `https://dmitrij-novikov-glf7779:mytoken@git.lab.karpov.courses/dmitrij-novikov-glf7779/mlops-final-project.git`).
-     - `GIT_USER_EMAIL`: Ваш email.
-     - `GIT_USER_NAME`: Ваше имя.
-     - `MINIO_ACCESS_KEY`: Такой же, как в `.dvc/config.local`.
-     - `MINIO_SECRET_KEY`: Такой же, как в `.dvc/config.local`.
-     - `REPO_PATH`: `/opt/airflow/project` (такой же, как в `.env`).
+4. **Сборка и запуск с Docker**:
+- Перейдите в корень проекта.
+- Выполните:
+docker compose up --build
 
-7. **Запуск DAG**:
-   - В интерфейсе Airflow перейдите в **DAGs** и запустите DAG.
-   - ![Запуск DAG](https://ltdfoto.ru/images/2025/11/09/image3bab087f986e31c3.png)
-   - Отслеживайте прогресс в представлении DAG.
-   - ![Детали DAG](https://ltdfoto.ru/images/2025/11/09/imageed3666d1984cafeb.png)
-   - Проверьте логи на успешное завершение.
-   - ![Логи успешной задачи](https://ltdfoto.ru/images/2025/11/09/image21fc62461c6939d2.png)
-   - Проверьте коммиты в GitLab.
-   - ![История коммитов GitLab](https://ltdfoto.ru/images/2025/11/09/imagea83763c40c814b8a.png)
+- Интерфейс Airflow будет доступен по адресу [http://localhost:8080](http://localhost:8080).
+- API будет доступно по адресу [http://localhost:8000](http://localhost:8000).
 
-8. **Тестирование API**:
-   - Доступ к Swagger UI по адресу [http://localhost:8000/docs](http://localhost:8000/docs) для тестирования предсказаний.
+5. **Настройка переменных Airflow**:
+- Перейдите в веб-интерфейс Airflow.
+- Перейдите в **Admin > Variables** и создайте следующие переменные:
+- `GIT_BRANCH`: `develop` (ветка для коммита .dvc файлов и метрик).
+- `GIT_REMOTE_URL`: `https://<username>:<token>@git.lab.karpov.courses/<username>/mlops-final-project.git` (замените на свои данные GitLab, если используете GitLab, или на GitHub-ссылку с токеном).
+- `GIT_USER_EMAIL`: Ваш email.
+- `GIT_USER_NAME`: Ваше имя.
+- `MINIO_ACCESS_KEY`: Такой же, как в `.dvc/config.local`.
+- `MINIO_SECRET_KEY`: Такой же, как в `.dvc/config.local`.
+- `REPO_PATH`: `/opt/airflow/project` (такой же, как в `.env`).
+
+6. **Запуск DAG**:
+- В интерфейсе Airflow перейдите в **DAGs** и запустите DAG.
+- Отслеживайте прогресс в представлении DAG.
+- Проверьте логи на успешное завершение.
+- Проверьте коммиты в вашем репозитории (GitLab или GitHub).
+
+7. **Тестирование API**:
+- Доступ к Swagger UI по адресу [http://localhost:8000/docs](http://localhost:8000/docs) для тестирования предсказаний.
 
 ### Проверки CI/CD
-При создании merge request в ветку `main` выполняются следующие проверки:
+При создании merge request в ветку `main` (в GitLab) выполняются следующие проверки:
 1. **Линтинг Flake8**: Проверки стиля кода.
 2. **Проверка DVC**: Проверяет доступность файлов в хранилище S3.
 3. **Тесты API**: Выполняются после проверки DVC, используя загруженные артефакты модели.
-   - ![Проверки CI/CD](https://ltdfoto.ru/images/2025/11/09/image149def195f347da8.png)
